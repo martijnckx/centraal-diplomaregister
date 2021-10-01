@@ -1,5 +1,4 @@
 const express = require('express')
-const mime = require('mime-types')
 const xlsx = require('node-xlsx')
 const multer = require('multer')
 const https = require('https')
@@ -52,16 +51,93 @@ const getCsrfTokens = function() {
     })
 }
 
+const getDegreeInfo = async function(person, tokens) {
+    const data = `_token=${tokens.csrf}&diplomaNumber=&lastName=${person[0]}&dateOfBirth=${person[1]}`;
+    const options = {
+        hostname: 'csm-examen.be',
+        port: 443,
+        path: '/cdr',
+        headers: {
+            'Cookie': tokens.cookies,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': Buffer.byteLength(data),
+        },
+        method: 'POST',
+    }
+
+    return new Promise(resolve => {
+        // Set up the request
+        var req = https.request(options, res => {
+            let data = '';
+
+            res.on('data', d => {
+                data += d
+            })
+
+            res.on('end', () => {
+                const degreeRegex = new RegExp(/<dt>Type<\/dt>\s*<dd>(.*)<\/dd>\s*<dt>Geldig tot<\/dt>\s*<dd>\s*(\d{1,2}-\d{1,2}-\d{4})\s*<\/dd>/g)
+                const degreeInfo = degreeRegex.exec(data);
+                let result = ['/', '/'];
+                if (degreeInfo) result = [degreeInfo[1], degreeInfo[2]]
+                resolve(result)
+            });
+        });
+
+        req.on('error', error => {
+            console.error(error)
+        })
+
+        // post the data
+        req.write(data);
+        req.end();
+
+    });
+
+    // _token: SNkubzlhPMhD7b2nNXavk2jGJKw3ef5dyCKQGKTu
+    // diplomaNumber: 
+    // lastName: Patteeuw
+    // dateOfBirth: 05-04-1976
+}
+
 const doLookups = async function(filepath) {
     // Format correctly and get the desired columns
-    const sheet = xlsx.parse(filepath)[0].data.map(a => {
-        const dateobj = excelDateToJS(a[a.length - 1]);;
+    let sheet_original = xlsx.parse(filepath)[0].data
+    sheet_original = sheet_original.map(a => {
+        if (a[a.length - 1] !== 'Geboortedag') {
+            const dateobj = excelDateToJS(a[a.length - 1]);
+            a[a.length - 1] = dateobj;
+        }
+        return a;
+    })
+    let sheet = xlsx.parse(filepath)[0].data;
+    sheet.shift();
+    sheet = sheet.map(a => {
+        const dateobj = excelDateToJS(a[a.length - 1]);
         a[a.length - 1] = `${dateobj.getDate()}-${dateobj.getMonth()+1}-${dateobj.getFullYear()}`;
         return [a[3], a[5]];
     });
-    // Get CSRF token
-    tokens = await getCsrfTokens();
-    console.log(tokens);
+    sheet = sheet.filter(x => x && x[0] && x[1])
+        // Get CSRF token
+    const tokens = await getCsrfTokens();
+    let degrees = [];
+    console.log(`Checking ${sheet.length} people`)
+    console.log(sheet);
+    for (let person of sheet) {
+        let degree = await getDegreeInfo(person, tokens);
+        degrees.push(degree)
+    }
+
+    sheet_original[0][6] = 'Titel diploma';
+    sheet_original[0][7] = 'Geldigheid diploma';
+
+    i = 0;
+    while (i < sheet_original.length - 1 && i < degrees.length) {
+        sheet_original[i + 1][6] = degrees[i][0];
+        sheet_original[i + 1][7] = degrees[i][1];
+        i++;
+    }
+    const newSheetData = xlsx.build([{ name: "withDegrees", data: sheet_original }]); // Returns a buffer
+    fs.writeFileSync('tmp/degrees.xlsx', newSheetData);
 }
 
 const makeid = function(length) {
@@ -108,7 +184,7 @@ app.get('/', (req, res, next) => {
 app.post('/lookup', (req, res, next) => {
     let upload = multer({ storage: storage, fileFilter: onlySheets }).single('sheet');
 
-    upload(req, res, function(err) {
+    upload(req, res, async function(err) {
         // req.file contains information of uploaded file
         // req.body contains information of text fields, if there were any
 
@@ -122,7 +198,7 @@ app.post('/lookup', (req, res, next) => {
             return res.send(err);
         }
 
-        const lookups = doLookups(req.file.path)
+        const lookups = await doLookups(req.file.path);
         fs.unlink(req.file.path, (err) => {
             if (err) throw err;
         })
