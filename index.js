@@ -120,8 +120,6 @@ const doLookups = async function(filepath) {
         // Get CSRF token
     const tokens = await getCsrfTokens();
     let degrees = [];
-    console.log(`Checking ${sheet.length} people`)
-    console.log(sheet);
     for (let person of sheet) {
         let degree = await getDegreeInfo(person, tokens);
         degrees.push(degree)
@@ -136,8 +134,8 @@ const doLookups = async function(filepath) {
         sheet_original[i + 1][7] = degrees[i][1];
         i++;
     }
-    const newSheetData = xlsx.build([{ name: "withDegrees", data: sheet_original }]); // Returns a buffer
-    fs.writeFileSync('tmp/degrees.xlsx', newSheetData);
+    const newSheetData = xlsx.build([{ name: "withDegrees", data: sheet_original, type: 'base64' }]); // Returns a buffer
+    return newSheetData;
 }
 
 const makeid = function(length) {
@@ -203,8 +201,10 @@ app.post('/lookup', (req, res, next) => {
             if (err) throw err;
         })
 
-        // Display uploaded image for user validation
-        res.send(`Thanks for the sheet`);
+        res.writeHead(200, {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        res.end(Buffer.from(lookups, 'base64'));
     });
 })
 
