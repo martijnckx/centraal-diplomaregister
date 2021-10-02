@@ -6,13 +6,69 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Automatische opzoeking in centraal diplomaregister</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <form action="/lookup" method="POST" enctype="multipart/form-data">
-        <input type="file" name="sheet">
-        <button type="submit">Start</button>
+    <!-- Upload Area -->
+    <form action="/lookup" method="POST" enctype="multipart/form-data" id="uploadArea" class="upload-area">
+        <!-- Header -->
+        <div class="upload-area__header">
+            <h1 class="upload-area__title">CSM-Examen</h1>
+            <p class="upload-area__paragraph" id="file-explanation">
+                Automatische opzoekingen in het centraal diplomaregister. Upload een
+                <strong class="upload-area__tooltip">excel sheet
+                <span class="upload-area__tooltip-data"></span> <!-- Data Will be Comes From Js -->
+                </strong>, waar kolom D de familienaam bevat, en kolom F de geboortedatum.
+            </p>
+        </div>
+        <!-- End Header -->
+
+        <!-- Drop Zoon -->
+        <div id="dropZoon" class="upload-area__drop-zoon drop-zoon">
+            <span class="drop-zoon__icon">
+        <i class='bx bxs-file-image'></i>
+      </span>
+            <p class="drop-zoon__paragraph">Sleep je bestand naar hier <br>of klik om een bestand te selecteren.</p>
+            <span id="loadingText" class="drop-zoon__loading-text">Please Wait</span>
+            <input type="file" id="fileInput" name="sheet" class="drop-zoon__file-input" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        </div>
+        <!-- End Drop Zoon -->
+
+        <!-- File Details -->
+        <div id="fileDetails" class="upload-area__file-details file-details">
+            <h3 class="file-details__title">Uploaded File</h3>
+
+            <div id="uploadedFile" class="uploaded-file">
+                <div class="uploaded-file__icon-container">
+                    <i class='bx bxs-file-blank uploaded-file__icon'></i>
+                    <span class="uploaded-file__icon-text"></span>
+                    <!-- Data Will be Comes From Js -->
+                </div>
+
+                <div id="uploadedFileInfo" class="uploaded-file__info">
+                    <span class="uploaded-file__name">Proejct 1</span>
+                    <span class="uploaded-file__counter">0%</span>
+                </div>
+            </div>
+        </div>
+        <!-- End File Details -->
+
+        <!-- Submit Button -->
+        <div id="submitButton">
+            <button type="submit">Start</button>
+        </div>
+        <!-- End Submit Button -->
+
+        <!-- Loader -->
+        <div id="loader-wrapper" style="display: none; margin-top: 30px;">
+            <div class="loader4"></div>
+            <p style="color: var(--clr-blue);">Even geduld, de opzoekingen kunnen enkele minuten duren...</p>
+        </div>
+        <!-- End Loader -->
     </form>
+    <!-- End Upload Area -->
+    <script src="script.js" async defer></script>
 </body>
 
 </html>

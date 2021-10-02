@@ -92,11 +92,6 @@ const getDegreeInfo = async function(person, tokens) {
         req.end();
 
     });
-
-    // _token: SNkubzlhPMhD7b2nNXavk2jGJKw3ef5dyCKQGKTu
-    // diplomaNumber: 
-    // lastName: Patteeuw
-    // dateOfBirth: 05-04-1976
 }
 
 const doLookups = async function(filepath) {
